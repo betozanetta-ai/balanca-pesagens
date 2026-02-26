@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Pesagens</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+    }
+
+    header {
+      background: #1a5276;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 1.4rem; }
+
+    #status-bar {
+      font-size: 0.85rem;
+      background: #154360;
+      padding: 6px 24px;
+      color: #aed6f1;
+      display: flex;
+      gap: 24px;
+    }
+
+    #status-bar span { font-weight: bold; color: white; }
+
+    .container { padding: 20px 24px; }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      background: #2980b9;
+      color: white;
+      padding: 12px 20px;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: #eaf2ff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: bold;
+      color: #1a5276;
+      border-bottom: 2px solid #d0e4f7;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    tr:hover td { background: #f7fbff; }
+
+    tr.nova td { background: #eafaf1; }
+    tr.nova td:first-child { border-left: 4px solid #27ae60; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .badge-nova { background: #d5f5e3; color: #1e8449; }
+
+    .campo-valor {
+      display: inline-block;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin: 1px;
+      font-size: 0.82rem;
+      font-family: monospace;
+    }
+
+    #countdown {
+      font-size: 0.8rem;
+      color: #aed6f1;
+    }
+
+    .empty {
+      padding: 40px;
+      text-align: center;
+      color: #999;
+    }
+
+    @media (max-width: 600px) {
+      th, td { padding: 8px 10px; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚖️ Painel de Pesagens — Tempo Real</h1>
+  <span id="countdown">Atualizando em <span id="timer">10</span>s</span>
+</header>
+
+<div id="status-bar">
+  <div>Última atualização: <span id="ultima-atualizacao">--</span></div>
+  <div>Total de registros: <span id="total">{{ pesagens|length }}</span></div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-header">📋 Registros de Pesagem (últimos 50)</div>
+
+    {% if pesagens %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Recebido em</th>
+          <th>Dados da Pesagem</th>
+        </tr>
+      </thead>
+      <tbody id="tabela-corpo">
+        {% for p in pesagens %}
+        <tr {% if loop.index == 1 %}class="nova"{% endif %}>
+          <td>
+            {{ p.id }}
+            {% if loop.index == 1 %}
+            <span class="badge badge-nova">NOVO</span>
+            {% endif %}
+          </td>
+          <td>{{ p.recebido }}</td>
+          <td>
+            {% for c in p.campos %}
+              {% if c.strip() %}
+              <span class="campo-valor">{{ c.strip() }}</span>
+              {% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      Nenhuma pesagem recebida ainda.<br>
+      Aguardando dados da balança...
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  let segundos = 10;
+
+  function atualizarHora() {
+    const agora = new Date();
+    document.getElementById('ultima-atualizacao').textContent =
+      agora.toLocaleTimeString('pt-BR');
+  }
+
+  function contagem() {
+    segundos--;
+    document.getElementById('timer').textContent = segundos;
+    if (segundos <= 0) {
+      location.reload();
+    }
+  }
+
+  atualizarHora();
+  setInterval(contagem, 1000);
+</script>
+
+</body>
+</html>
