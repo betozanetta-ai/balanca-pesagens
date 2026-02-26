@@ -1,20 +1,322 @@
-{% for p in pesagens %} {% set c = p.campos %}
-Ticket #{{ c[0] if c|length > 0 else '?' }}
-{{ c[1] if c|length > 1 else '?' }}
-{% if loop.index == 1 %}
-NOVO
-{% endif %}
-Data Entrada	{{ c[5] if c|length > 5 else '-' }}
-Data Saída	{{ c[7] if c|length > 7 else '-' }}
-Nota Fiscal	{{ c[3] if c|length > 3 else '-' }}
-Empresa	{{ c[2] if c|length > 2 else '-' }}
-Produto	{{ c[4] if c|length > 4 else '-' }}
-Peso Entrada (kg)	{{ c[16] if c|length > 16 else '-' }}
-Peso Saída (kg)	{{ c[17] if c|length > 17 else '-' }}
-Peso Líquido (kg)	{{ c[23] if c|length > 23 else '-' }}
-Umidade (%)	{{ c[18] if c|length > 18 else '-' }}
-Impureza (%)	{{ c[19] if c|length > 19 else '-' }}
-Avariados (%)	{{ c[20] if c|length > 20 else '-' }}
-Observações	{{ c[27] if c|length > 27 else '-' }}
-Recebido: {{ p.recebido_em }}
-{% endfor %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Pesagens</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #e8edf2;
+      color: #222;
+    }
+
+    /* CABEÇALHO */
+    header {
+      background: #1a3a5c;
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 1.2rem; letter-spacing: 1px; }
+    #timer-bar {
+      font-size: 0.8rem;
+      color: #aac4e0;
+    }
+
+    /* STATUS */
+    .status-bar {
+      background: #12293f;
+      color: #7fb3d3;
+      padding: 5px 24px;
+      font-size: 0.8rem;
+      display: flex;
+      gap: 20px;
+    }
+    .status-bar b { color: white; }
+
+    /* CONTAINER */
+    .container { padding: 20px; max-width: 900px; margin: 0 auto; }
+
+    /* TICKET CARD */
+    .ticket {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+      margin-bottom: 20px;
+      overflow: hidden;
+      border-left: 6px solid #2980b9;
+    }
+    .ticket.novo {
+      border-left-color: #27ae60;
+    }
+
+    .ticket-header {
+      background: #1a3a5c;
+      color: white;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+    .ticket-header .numero {
+      font-size: 1.1rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .badge-novo {
+      background: #27ae60;
+      color: white;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      animation: pisca 1s infinite;
+    }
+    @keyframes pisca {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .ticket-recebido {
+      font-size: 0.78rem;
+      color: #aac4e0;
+    }
+
+    /* SEÇÕES INTERNAS */
+    .ticket-body { padding: 14px 18px; }
+
+    .secao {
+      border-bottom: 1px dashed #ddd;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+    .secao:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .linha {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.9rem;
+    }
+    .linha .label {
+      color: #666;
+      min-width: 130px;
+    }
+    .linha .valor {
+      font-weight: bold;
+      text-align: right;
+    }
+
+    /* PESO LÍQUIDO — destaque */
+    .peso-liquido {
+      background: #eafaf1;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #a9dfbf;
+    }
+    .peso-liquido .label {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #1e8449;
+    }
+    .peso-liquido .valor {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #1e8449;
+    }
+
+    /* HISTÓRICO — lista compacta */
+    .historico-titulo {
+      font-size: 0.85rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      margin-top: 10px;
+    }
+
+    .ticket-mini {
+      background: white;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      border-left: 4px solid #bdc3c7;
+    }
+    .ticket-mini .info { color: #444; }
+    .ticket-mini .info b { color: #222; }
+    .ticket-mini .peso { font-weight: bold; color: #1e8449; font-size: 1rem; }
+    .ticket-mini .hora { color: #999; font-size: 0.78rem; }
+
+    /* VAZIO */
+    .vazio {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      font-size: 1rem;
+    }
+    .vazio .icone { font-size: 3rem; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚖️ PAINEL DE PESAGENS — TEMPO REAL</h1>
+  <span id="timer-bar">Atualizando em <b id="seg">10</b>s</span>
+</header>
+
+<div class="status-bar">
+  <span>Última atualização: <b id="hora-atual">--</b></span>
+  <span>Total de registros: <b>{{ pesagens|length }}</b></span>
+</div>
+
+<div class="container">
+
+  {% if pesagens %}
+
+    {# TICKET MAIS RECENTE — destaque #}
+    {% set p = pesagens[0] %}
+    {% set c = p.campos %}
+
+    <div class="ticket novo">
+      <div class="ticket-header">
+        <div>
+          <div class="numero">TICKET DE PESAGEM Nº {{ c[0] if c|length > 0 else '?' }}</div>
+          <div class="ticket-recebido">Recebido no sistema: {{ p.recebido }}</div>
+        </div>
+        <span class="badge-novo">● NOVO</span>
+      </div>
+
+      <div class="ticket-body">
+
+        <!-- Datas -->
+        <div class="secao">
+          <div class="linha">
+            <span class="label">Data/Hora Entrada</span>
+            <span class="valor">{{ c[5] if c|length > 5 else '-' }}</span>
+          </div>
+          <div class="linha">
+            <span class="label">Data/Hora Saída</span>
+            <span class="valor">{{ c[7] if c|length > 7 else '-' }}</span>
+          </div>
+        </div>
+
+        <!-- Identificação -->
+        <div class="secao">
+          <div class="linha">
+            <span class="label">Placa</span>
+            <span class="valor">{{ c[1] if c|length > 1 else '-' }}</span>
+          </div>
+          <div class="linha">
+            <span class="label">Empresa</span>
+            <span class="valor">{{ c[2] if c|length > 2 else '-' }}</span>
+          </div>
+          <div class="linha">
+            <span class="label">Produto</span>
+            <span class="valor">{{ c[4] if c|length > 4 else '-' }}</span>
+          </div>
+          <div class="linha">
+            <span class="label">Nota Fiscal</span>
+            <span class="valor">{{ c[3] if c|length > 3 else '-' }}</span>
+          </div>
+        </div>
+
+        <!-- Qualidade -->
+        <div class="secao">
+          <div class="linha">
+            <span class="label">Umidade</span>
+            <span class="valor">{{ c[18] if c|length > 18 else '-' }} %</span>
+          </div>
+          <div class="linha">
+            <span class="label">Impureza</span>
+            <span class="valor">{{ c[19] if c|length > 19 else '-' }} %</span>
+          </div>
+          <div class="linha">
+            <span class="label">Avariados</span>
+            <span class="valor">{{ c[20] if c|length > 20 else '-' }} %</span>
+          </div>
+        </div>
+
+        <!-- Pesagens -->
+        <div class="secao">
+          <div class="linha">
+            <span class="label">Pesagem de Entrada</span>
+            <span class="valor">{{ c[16] if c|length > 16 else '-' }} kg</span>
+          </div>
+          <div class="linha">
+            <span class="label">Pesagem de Saída</span>
+            <span class="valor">{{ c[17] if c|length > 17 else '-' }} kg</span>
+          </div>
+          <div class="peso-liquido">
+            <span class="label">Peso Líquido</span>
+            <span class="valor">{{ c[23] if c|length > 23 else '-' }} kg</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# HISTÓRICO — tickets anteriores em formato compacto #}
+    {% if pesagens|length > 1 %}
+    <div class="historico-titulo">Registros anteriores</div>
+
+    {% for p in pesagens[1:] %}
+    {% set c = p.campos %}
+    <div class="ticket-mini">
+      <div class="info">
+        <b>#{{ c[0] if c|length > 0 else '?' }}</b>
+        &nbsp;·&nbsp; {{ c[1] if c|length > 1 else '-' }}
+        &nbsp;·&nbsp; {{ c[4] if c|length > 4 else '-' }}
+        &nbsp;·&nbsp; NF {{ c[3] if c|length > 3 else '-' }}
+      </div>
+      <div style="text-align:right">
+        <div class="peso">{{ c[23] if c|length > 23 else '-' }} kg</div>
+        <div class="hora">{{ p.recebido }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+  {% else %}
+    <div class="vazio">
+      <div class="icone">⚖️</div>
+      Nenhuma pesagem recebida ainda.<br>
+      Aguardando dados da balança...
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+  let seg = 10;
+
+  function atualizarHora() {
+    const agora = new Date();
+    document.getElementById('hora-atual').textContent =
+      agora.toLocaleTimeString('pt-BR');
+  }
+
+  setInterval(() => {
+    seg--;
+    document.getElementById('seg').textContent = seg;
+    if (seg <= 0) location.reload();
+  }, 1000);
+
+  atualizarHora();
+</script>
+
+</body>
+</html>
