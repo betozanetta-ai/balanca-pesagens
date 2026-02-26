@@ -7,6 +7,7 @@ app = Flask(__name__)
 DB = 'pesagens.db'
 
 def init_db():
+    """Cria a tabela se não existir."""
     conn = sqlite3.connect(DB)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS pesagens (
@@ -69,7 +70,9 @@ def api_pesagens():
     conn.close()
     return jsonify([dict(r) for r in rows])
 
+# Inicializa o banco ao carregar o módulo (funciona com gunicorn também)
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
