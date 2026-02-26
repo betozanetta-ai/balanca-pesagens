@@ -89,7 +89,7 @@ def receber_pesagem():
     conn.execute(
         'INSERT INTO pesagens (recebido, linha_raw, campos) VALUES (?, ?, ?)',
         (
-            datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+            dados.get('horario_local') or datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             dados.get('linha_raw', ''),
             json.dumps(dados.get('campos', []), ensure_ascii=False)
         )
