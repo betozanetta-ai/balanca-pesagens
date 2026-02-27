@@ -206,11 +206,11 @@
         <div class="secao">
           <div class="linha">
             <span class="label">Data/Hora Entrada</span>
-            <span class="valor">{{ c[5] if c|length > 5 else '-' }}</span>
+            <span class="valor">{{ c[9] if c|length > 9 else '-' }}</span>
           </div>
           <div class="linha">
             <span class="label">Data/Hora Saída</span>
-            <span class="valor">{{ c[7] if c|length > 7 else '-' }}</span>
+            <span class="valor">{{ c[10] if c|length > 10 else '-' }}</span>
           </div>
         </div>
 
@@ -254,15 +254,15 @@
         <div class="secao">
           <div class="linha">
             <span class="label">Pesagem de Entrada</span>
-            <span class="valor">{{ c[16] if c|length > 16 else '-' }} kg</span>
+            <span class="valor">{{ c[21] if c|length > 21 else '-' }} kg</span>
           </div>
           <div class="linha">
             <span class="label">Pesagem de Saída</span>
-            <span class="valor">{{ c[17] if c|length > 17 else '-' }} kg</span>
+            <span class="valor">{{ c[25] if c|length > 25 else '-' }} kg</span>
           </div>
           <div class="peso-liquido">
             <span class="label">Peso Líquido</span>
-            <span class="valor">{{ c[23] if c|length > 23 else '-' }} kg</span>
+            <span class="valor">{{ c[27] if c|length > 27 else '-' }} kg</span>
           </div>
         </div>
 
@@ -283,7 +283,7 @@
         &nbsp;·&nbsp; NF {{ c[3] if c|length > 3 else '-' }}
       </div>
       <div style="text-align:right">
-        <div class="peso">{{ c[23] if c|length > 23 else '-' }} kg</div>
+        <div class="peso">{{ c[27] if c|length > 27 else '-' }} kg</div>
         <div class="hora">{{ p.recebido }}</div>
       </div>
     </div>
