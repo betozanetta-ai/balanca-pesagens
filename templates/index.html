@@ -221,16 +221,16 @@
             <span class="valor">{{ c[1] if c|length > 1 else '-' }}</span>
           </div>
           <div class="linha">
-            <span class="label">Empresa</span>
-            <span class="valor">{{ c[2] if c|length > 2 else '-' }}</span>
+            <span class="label">Cód. Empresa</span>
+            <span class="valor">{{ c[6] if c|length > 6 and c[6].strip() else '-' }}</span>
           </div>
           <div class="linha">
-            <span class="label">Produto</span>
-            <span class="valor">{{ c[4] if c|length > 4 else '-' }}</span>
+            <span class="label">Cód. Produto</span>
+            <span class="valor">{{ c[7] if c|length > 7 and c[7].strip() else '-' }}</span>
           </div>
           <div class="linha">
             <span class="label">Nota Fiscal</span>
-            <span class="valor">{{ c[3] if c|length > 3 else '-' }}</span>
+            <span class="valor">{{ c[32] if c|length > 32 and c[32].strip() else '-' }}</span>
           </div>
         </div>
 
@@ -279,8 +279,8 @@
       <div class="info">
         <b>#{{ c[0] if c|length > 0 else '?' }}</b>
         &nbsp;·&nbsp; {{ c[1] if c|length > 1 else '-' }}
-        &nbsp;·&nbsp; {{ c[4] if c|length > 4 else '-' }}
-        &nbsp;·&nbsp; NF {{ c[3] if c|length > 3 else '-' }}
+        &nbsp;·&nbsp; cód.{{ c[7] if c|length > 7 and c[7].strip() else '-' }}
+        &nbsp;·&nbsp; NF {{ c[32] if c|length > 32 and c[32].strip() else '-' }}
       </div>
       <div style="text-align:right">
         <div class="peso">{{ c[27] if c|length > 27 else '-' }} kg</div>
