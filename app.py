@@ -1,29 +1,32 @@
 from flask import Flask, request, jsonify, render_template
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import json
 import os
 from datetime import datetime
 
 app = Flask(__name__)
-DB = 'pesagens.db'
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    return conn
 
 def init_db():
-    conn = sqlite3.connect(DB)
-    conn.execute('''
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS pesagens (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            id         SERIAL PRIMARY KEY,
             recebido   TEXT NOT NULL,
             linha_raw  TEXT,
             campos     TEXT
         )
     ''')
     conn.commit()
+    cur.close()
     conn.close()
-
-def get_db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def parse_campos(raw_campos_str):
     """Converte string de campos para lista, suportando JSON e formato antigo."""
@@ -32,15 +35,15 @@ def parse_campos(raw_campos_str):
     try:
         return json.loads(raw_campos_str)
     except Exception:
-        # fallback para formato antigo
         return raw_campos_str.strip("[]").replace("'", "").split(', ')
 
 @app.route('/')
 def dashboard():
     conn = get_db()
-    rows = conn.execute(
-        'SELECT * FROM pesagens ORDER BY id DESC LIMIT 50'
-    ).fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM pesagens ORDER BY id DESC LIMIT 50')
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
     pesagens = []
     for row in rows:
@@ -56,9 +59,10 @@ def dashboard():
 def debug():
     """Página de diagnóstico — mostra os campos por posição (índice)."""
     conn = get_db()
-    row = conn.execute(
-        'SELECT * FROM pesagens ORDER BY id DESC LIMIT 1'
-    ).fetchone()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM pesagens ORDER BY id DESC LIMIT 1')
+    row = cur.fetchone()
+    cur.close()
     conn.close()
     if not row:
         return '<h2>Nenhum registro ainda.</h2>'
@@ -71,7 +75,7 @@ def debug():
     html += 'td{padding:8px 12px;border-bottom:1px solid #ddd;background:white}'
     html += 'tr:nth-child(even) td{background:#f9f9f9}'
     html += '</style></head><body>'
-    html += f'<h2>Diagnóstico — Ticket #{row["id"]}</h2>'
+    html += f'<h2>Diagnóstico — Registro #{row["id"]}</h2>'
     html += f'<p><b>Recebido:</b> {row["recebido"]}</p>'
     html += f'<p><b>Linha bruta:</b> <code style="word-break:break-all">{row["linha_raw"]}</code></p><br>'
     html += '<table><tr><th>Índice</th><th>Valor</th></tr>'
@@ -86,8 +90,9 @@ def receber_pesagem():
     if not dados:
         return jsonify({'erro': 'dados invalidos'}), 400
     conn = get_db()
-    conn.execute(
-        'INSERT INTO pesagens (recebido, linha_raw, campos) VALUES (?, ?, ?)',
+    cur = conn.cursor()
+    cur.execute(
+        'INSERT INTO pesagens (recebido, linha_raw, campos) VALUES (%s, %s, %s)',
         (
             dados.get('horario_local') or datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             dados.get('linha_raw', ''),
@@ -95,15 +100,17 @@ def receber_pesagem():
         )
     )
     conn.commit()
+    cur.close()
     conn.close()
     return jsonify({'status': 'ok'})
 
 @app.route('/api/pesagens')
 def api_pesagens():
     conn = get_db()
-    rows = conn.execute(
-        'SELECT * FROM pesagens ORDER BY id DESC LIMIT 50'
-    ).fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM pesagens ORDER BY id DESC LIMIT 50')
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
     return jsonify([dict(r) for r in rows])
 
